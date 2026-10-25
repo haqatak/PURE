@@ -45,7 +45,10 @@ def _pipeline(backbone):
         _CACHED = None
         _CACHE_KEY = None
         gc.collect()
-        torch.cuda.empty_cache()
+        if torch.cuda.is_available():
+            torch.cuda.empty_cache()
+        elif hasattr(torch.backends, "mps") and torch.backends.mps.is_available():
+            torch.mps.empty_cache()
         if model_root:
             model = PURE.from_pretrained(model_root, subfolder=backbone)
         elif model_repo:
@@ -56,9 +59,15 @@ def _pipeline(backbone):
             model = PURE.from_legacy_hub(backbone)
         if model.config.backbone != backbone:
             raise ValueError("Model configuration does not match the selected backbone")
+        if torch.cuda.is_available():
+            device = "cuda"
+        elif hasattr(torch.backends, "mps") and torch.backends.mps.is_available():
+            device = "mps"
+        else:
+            raise RuntimeError("Neither CUDA nor MPS is available.")
         _CACHED = ReconstructionPipeline(
             model,
-            device="cuda",
+            device=device,
             sky_model_directory=os.environ.get("PURE_SKY_MODEL_DIR"),
         )
         _CACHE_KEY = key
@@ -80,9 +89,10 @@ def reconstruct(source, video, files, backbone, count, start, remove_sky, save_r
         raise gr.Error("Upload at least two images.")
     if source not in ("Video", "Images"):
         raise gr.Error("Choose Video or Images.")
-    if not torch.cuda.is_available():
+
+    if not torch.cuda.is_available() and not (hasattr(torch.backends, "mps") and torch.backends.mps.is_available()):
         raise gr.Error(
-            "This app needs a CUDA GPU. Select GPU hardware for the Space; A10G 24 GB or larger is recommended for 48 frames."
+            "This app needs a CUDA or MPS GPU. Select GPU hardware for the Space."
         )
     with _LOCK:
         OUTPUT_ROOT.mkdir(parents=True, exist_ok=True)
@@ -111,12 +121,26 @@ def reconstruct(source, video, files, backbone, count, start, remove_sky, save_r
             _CACHED = None
             _CACHE_KEY = None
             gc.collect()
-            torch.cuda.empty_cache()
+            if torch.cuda.is_available():
+                torch.cuda.empty_cache()
             shutil.rmtree(directory, ignore_errors=True)
             raise gr.Error(
                 "GPU memory is full. Reduce the frame count or use a larger GPU."
             ) from None
-        except (ValueError, RuntimeError, OSError) as error:
+        except RuntimeError as error:
+            if "Out of memory" in str(error):
+                _CACHED = None
+                _CACHE_KEY = None
+                gc.collect()
+                if hasattr(torch.backends, "mps") and torch.backends.mps.is_available():
+                    torch.mps.empty_cache()
+                shutil.rmtree(directory, ignore_errors=True)
+                raise gr.Error(
+                    "GPU memory is full. Reduce the frame count or use a larger GPU."
+                ) from None
+            shutil.rmtree(directory, ignore_errors=True)
+            raise gr.Error(str(error)) from error
+        except (ValueError, OSError) as error:
             shutil.rmtree(directory, ignore_errors=True)
             raise gr.Error(str(error)) from error
     info = result["metadata"]

@@ -478,6 +478,8 @@ class SSLoss(nn.Module):
                 del pred_chunk_lr, gt_chunk_lr, mask_chunk_lr, radius_chunk, weight_chunk, chunk_scale, chunk_shift
                 if torch.cuda.is_available():
                     torch.cuda.empty_cache()
+                elif hasattr(torch.backends, "mps") and torch.backends.mps.is_available():
+                    torch.mps.empty_cache()
 
             local_scale = torch.cat(local_scale_list, dim=0) # (B_patches,)
             local_shift = torch.cat(local_shift_list, dim=0) # (B_patches, 3)

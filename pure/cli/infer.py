@@ -21,7 +21,7 @@ def main():
     p.add_argument("--images", nargs="+", required=True, help="Paths in temporal order")
     p.add_argument("--resize", nargs=2, type=int, metavar=("H", "W"))
     p.add_argument("--output", required=True)
-    p.add_argument("--device", default="cuda")
+    p.add_argument("--device", default="cuda" if torch.cuda.is_available() else "mps" if hasattr(torch.backends, "mps") and torch.backends.mps.is_available() else "cpu")
     p.add_argument("--precision", choices=["fp32", "bf16"], default="fp32")
     args = p.parse_args()
     images = load_images(args.images, args.resize)

@@ -87,7 +87,9 @@ def test_app_config_and_input_errors(monkeypatch):
     with pytest.raises(Exception, match="at least two"):
         app.reconstruct("Images", None, [], "pi3", 48, 0, True, False)
     monkeypatch.setattr(torch.cuda, "is_available", lambda: False)
-    with pytest.raises(Exception, match="CUDA GPU"):
+    if hasattr(torch.backends, "mps"):
+        monkeypatch.setattr(torch.backends.mps, "is_available", lambda: False)
+    with pytest.raises(Exception, match="CUDA or MPS GPU"):
         app.reconstruct("Video", "some.mp4", None, "pi3", 48, 0, True, False)
 
 

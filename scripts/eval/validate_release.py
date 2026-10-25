@@ -36,14 +36,20 @@ def main():
     args.output.mkdir(parents=True, exist_ok=True)
     paths = sorted(args.images.glob("*.png"))
     assert len(paths) == 48
-    images = PUREImageProcessor().images(paths[:2]).unsqueeze(0).cuda()
+    if torch.cuda.is_available():
+        device = "cuda"
+    elif hasattr(torch.backends, "mps") and torch.backends.mps.is_available():
+        device = "mps"
+    else:
+        device = "cpu"
+    images = PUREImageProcessor().images(paths[:2]).unsqueeze(0).to(device)
     records = []
     for name in ["pi3", "da3", "vggt"]:
         print("PARITY_START", name, flush=True)
         original = PURE.from_checkpoint(
             args.checkpoint_dir / (name + ".bin"), backbone=name
-        ).cuda()
-        with torch.inference_mode(), torch.autocast("cuda", dtype=torch.bfloat16):
+        ).to(device)
+        with torch.inference_mode(), torch.autocast(device, dtype=torch.bfloat16):
             before = {
                 k: v.float().cpu()
                 for k, v in original(images).items()
@@ -51,9 +57,12 @@ def main():
             }
         del original
         gc.collect()
-        torch.cuda.empty_cache()
-        model = PURE.from_pretrained(args.model_root, subfolder=name, device="cuda")
-        with torch.inference_mode(), torch.autocast("cuda", dtype=torch.bfloat16):
+        if device == "cuda":
+            torch.cuda.empty_cache()
+        elif device == "mps":
+            torch.mps.empty_cache()
+        model = PURE.from_pretrained(args.model_root, subfolder=name, device=device)
+        with torch.inference_mode(), torch.autocast(device, dtype=torch.bfloat16):
             after = {
                 k: v.float().cpu()
                 for k, v in model(images).items()
@@ -65,7 +74,10 @@ def main():
         print(json.dumps(record, allow_nan=False), flush=True)
         del model, before, after
         gc.collect()
-        torch.cuda.empty_cache()
+        if device == "cuda":
+            torch.cuda.empty_cache()
+        elif device == "mps":
+            torch.mps.empty_cache()
     os.environ["PURE_MODEL_ROOT"] = str(args.model_root)
     os.environ["PURE_OUTPUT_DIR"] = str(args.output / "studio")
     os.environ["PURE_SKY_MODEL_DIR"] = str(args.sky_model_directory)

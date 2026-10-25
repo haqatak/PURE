@@ -22,7 +22,7 @@ def main():
     p.add_argument("--config", required=True)
     p.add_argument("--data", required=True)
     p.add_argument("--output", required=True)
-    p.add_argument("--device", default="cuda")
+    p.add_argument("--device", default="cuda" if torch.cuda.is_available() else "mps" if hasattr(torch.backends, "mps") and torch.backends.mps.is_available() else "cpu")
     weights = p.add_mutually_exclusive_group(required=True)
     weights.add_argument("--checkpoint", help="Full refined checkpoint")
     weights.add_argument(

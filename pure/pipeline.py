@@ -15,6 +15,8 @@ class ReconstructionPipeline:
         self.device = torch.device(device)
         if self.device.type == "cuda" and not torch.cuda.is_available():
             raise RuntimeError("CUDA is required for the selected device")
+        if self.device.type == "mps" and not (hasattr(torch.backends, "mps") and torch.backends.mps.is_available()):
+            raise RuntimeError("MPS is required for the selected device")
         self.model = model.to(self.device).eval()
         self.sky_model_directory = sky_model_directory
         self.cache_dir = cache_dir
@@ -49,6 +51,8 @@ class ReconstructionPipeline:
         if self.device.type == "cuda":
             torch.cuda.synchronize(self.device)
             torch.cuda.reset_peak_memory_stats(self.device)
+        elif self.device.type == "mps":
+            torch.mps.synchronize()
         start = time.monotonic()
         with (
             torch.inference_mode(),
@@ -57,6 +61,8 @@ class ReconstructionPipeline:
             pred = self.model(images.unsqueeze(0).to(self.device))
         if self.device.type == "cuda":
             torch.cuda.synchronize(self.device)
+        elif self.device.type == "mps":
+            torch.mps.synchronize()
         inference_seconds = time.monotonic() - start
         arrays = {
             key: value[0].float().cpu().numpy()
@@ -94,4 +100,6 @@ class ReconstructionPipeline:
         )
         if self.device.type == "cuda":
             torch.cuda.empty_cache()
+        elif self.device.type == "mps":
+            torch.mps.empty_cache()
         return result

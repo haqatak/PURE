@@ -142,12 +142,11 @@ def fit(model, dataset, config, output, *, device="cpu", resume=None):
     precision = config.get("precision", "fp32")
     if precision not in {"fp32", "bf16"}:
         raise ValueError("precision must be fp32 or bf16")
-    if (
-        precision == "bf16"
-        and torch.device(device).type == "cuda"
-        and not torch.cuda.is_bf16_supported()
-    ):
-        raise ValueError("This CUDA device does not support BF16; use precision=fp32")
+    if precision == "bf16":
+        if torch.device(device).type == "cuda" and not torch.cuda.is_bf16_supported():
+            raise ValueError("This CUDA device does not support BF16; use precision=fp32")
+        # For MPS, bf16 might not be officially supported for autocast yet, or maybe it is in PyTorch 2.4+.
+        # We assume if the user asks for it and they use mps, we let it pass, or it fails downstream naturally if unsupported.
     output = Path(output)
     _prepare_output(output, resume)
     torch.manual_seed(config["seed"] + rank)

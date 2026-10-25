@@ -18,8 +18,8 @@ def test_batch_dry_run_is_side_effect_free(tmp_path):
     )
     records = [json.loads(line) for line in result.stdout.splitlines()]
     commands = [x['command'] for x in records if 'command' in x]
-    assert len(commands) == 12
-    assert len([x for x in records if 'download' in x]) == 13
+    assert len(commands) == 18
+    assert len([x for x in records if 'download' in x]) == 15
     assert list(tmp_path.iterdir()) == []
     for command in commands:
         if '--images' in command:

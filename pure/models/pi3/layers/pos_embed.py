@@ -6,11 +6,13 @@
 # Position embedding utils
 # --------------------------------------------------------
 
-
+import logging
 
 import numpy as np
 
 import torch
+
+logger = logging.getLogger(__name__)
 
 # --------------------------------------------------------
 # 2D sine-cosine position embedding
@@ -107,7 +109,7 @@ try:
     from models.curope import cuRoPE2D
     RoPE2D = cuRoPE2D
 except ImportError:
-    print('Warning, cannot find cuda-compiled version of RoPE2D, using a slow pytorch version instead')
+    logger.warning('cannot find cuda-compiled version of RoPE2D, using a slow pytorch version instead')
 
     class RoPE2D(torch.nn.Module):
 

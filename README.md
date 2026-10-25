@@ -109,10 +109,11 @@ Choose `pi3`, `da3` or `vggt` with `--subfolder`. [Demo options](examples/README
 import torch
 from pure import PURE, PUREImageProcessor
 
-model = PURE.from_pretrained("cyun9286/PURE", subfolder="pi3").to("cuda")
+device = "cuda" if torch.cuda.is_available() else "mps" if hasattr(torch.backends, "mps") and torch.backends.mps.is_available() else "cpu"
+model = PURE.from_pretrained("cyun9286/PURE", subfolder="pi3").to(device)
 images = PUREImageProcessor().video("input.mp4", max_frames=48)
-with torch.inference_mode(), torch.autocast("cuda", dtype=torch.bfloat16):
-    predictions = model(images.unsqueeze(0).to("cuda"))
+with torch.inference_mode(), torch.autocast(device, dtype=torch.bfloat16):
+    predictions = model(images.unsqueeze(0).to(device))
 ```
 
 The API returns tensors. The CLI and Studio add sky filtering and exports. [Model formats and provenance](docs/WEIGHTS.md).

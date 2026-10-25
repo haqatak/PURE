@@ -3,6 +3,7 @@
 from pathlib import Path
 import argparse
 import sys
+import torch
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[2]))
 from pure import PURE, PUREImageProcessor
@@ -26,7 +27,7 @@ def main():
     p.add_argument("--frames", type=int, default=48)
     p.add_argument("--start-frame", type=int, default=0)
     p.add_argument("--output", type=Path, required=True)
-    p.add_argument("--device", default="cuda")
+    p.add_argument("--device", default="cuda" if torch.cuda.is_available() else "mps" if hasattr(torch.backends, "mps") and torch.backends.mps.is_available() else "cpu")
     p.add_argument("--precision", choices=["auto", "fp32", "bf16"], default="auto")
     p.add_argument("--keep-sky", action="store_true")
     p.add_argument("--save-raw", action="store_true")

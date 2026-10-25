@@ -9,6 +9,7 @@ import shlex
 import subprocess
 import sys
 import tempfile
+import torch
 from urllib.request import urlopen
 
 ROOT = Path(__file__).resolve().parents[2]
@@ -83,7 +84,7 @@ def main():
     parser.add_argument('--inputs', type=Path, default=ROOT / 'examples')
     parser.add_argument('--output', type=Path, default=Path('outputs/demo'))
     parser.add_argument('--frames', type=int, default=48)
-    parser.add_argument('--device', default='cuda')
+    parser.add_argument('--device', default='cuda' if torch.cuda.is_available() else 'mps' if hasattr(torch.backends, 'mps') and torch.backends.mps.is_available() else 'cpu')
     parser.add_argument('--precision', choices=['auto', 'fp32', 'bf16'], default='auto')
     parser.add_argument('--keep-sky', action='store_true')
     mode = parser.add_mutually_exclusive_group()

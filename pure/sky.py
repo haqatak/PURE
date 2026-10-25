@@ -12,7 +12,9 @@ WEIGHT_SHA = "187ca07bea003a5717c63d04ea90b07f33cd033c0ebf44b4b89fce5070d6c8f3"
 
 
 class SkySegmenter:
-    def __init__(self, *, cache_dir=None, local_directory=None, device="cuda"):
+    def __init__(self, *, cache_dir=None, local_directory=None, device=None):
+        if device is None:
+            device = "cuda" if torch.cuda.is_available() else "mps" if hasattr(torch.backends, "mps") and torch.backends.mps.is_available() else "cpu"
         from transformers import (
             SegformerConfig,
             SegformerForSemanticSegmentation,

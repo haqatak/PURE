@@ -106,8 +106,11 @@ config, preprocessing config, Safetensors, model card, provenance and licenses.
 Install the PURE source package, then load with:
 
 ```python
+import torch
 from pure import PURE
-model = PURE.from_pretrained("cyun9286/PURE", subfolder="pi3").to("cuda")
+
+device = "cuda" if torch.cuda.is_available() else "mps" if hasattr(torch.backends, "mps") and torch.backends.mps.is_available() else "cpu"
+model = PURE.from_pretrained("cyun9286/PURE", subfolder="pi3").to(device)
 ```
 
 A local directory works identically. See each model card for component terms,
